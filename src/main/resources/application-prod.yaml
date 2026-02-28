@@ -1,0 +1,13 @@
+server:
+  port: 8080
+
+app:
+  name: Lenchevsky Maxim [PROD]
+  version: 1.0.0
+
+logging:
+  level:
+    root: WARN
+    com.example.demo: INFO
+
+debug: false
