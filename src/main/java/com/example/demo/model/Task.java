@@ -1,6 +1,9 @@
 package com.example.demo.model;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Модель данных для представления задачи (task). Содержит основную информацию о задаче:
@@ -27,6 +30,14 @@ public class Task {
      * Статус выполнения задачи (true - выполнена, false - не выполнена)
      */
     private boolean completed;
+
+    LocalDateTime createdAt;
+
+    LocalDate dueDate;
+
+    Priority priority;
+
+    Set<String> tags;
 
     /**
      * Конструктор для создания задачи со всеми параметрами.
