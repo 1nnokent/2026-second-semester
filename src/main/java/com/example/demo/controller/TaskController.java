@@ -1,7 +1,9 @@
 package com.example.demo.controller;
 
+import com.example.demo.mapper.TaskMapper;
 import com.example.demo.model.Task;
 import com.example.demo.service.TaskService;
+import java.util.ArrayList;
 import java.util.List;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,6 +13,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.example.demo.dto.*;
 
 
 /**
@@ -22,14 +25,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class TaskController {
 
     private final TaskService taskService;
+    private final TaskMapper taskMapper;
 
     /**
      * Конструктор контроллера с внедрением зависимости TaskService.
      *
      * @param taskService сервис для работы с задачами
      */
-    public TaskController(TaskService taskService) {
+    public TaskController(TaskService taskService, TaskMapper taskMapper) {
         this.taskService = taskService;
+        this.taskMapper = taskMapper;
     }
 
     /**
@@ -38,8 +43,12 @@ public class TaskController {
      * @return список всех задач
      */
     @GetMapping
-    public List<Task> getAllTasks() {
-        return taskService.getAllTasks();
+    public List<TaskResponseDto> getAllTasks() {
+        List<TaskResponseDto> returner = new ArrayList<>();
+        for (Task elem : taskService.getAllTasks()) {
+            returner.add(taskMapper.toResponseDto(elem));
+        }
+        return returner;
     }
 
     /**
@@ -49,8 +58,8 @@ public class TaskController {
      * @return задача с указанным идентификатором
      */
     @GetMapping("/{id}")
-    public Task getTask(@PathVariable int id) {
-        return taskService.getTask(id);
+    public TaskResponseDto getTask(@PathVariable int id) {
+        return taskMapper.toResponseDto(taskService.getTask(id));
     }
 
     /**
@@ -59,8 +68,8 @@ public class TaskController {
      * @param task объект задачи для создания
      */
     @PostMapping
-    public void createTask(@RequestBody Task task) {
-        taskService.addTask(task);
+    public void createTask(@RequestBody TaskCreateDto task) {
+        taskService.addTask(taskMapper.toEntity(task));
     }
 
     /**
@@ -70,8 +79,8 @@ public class TaskController {
      * @param task объект задачи с новыми данными
      */
     @PutMapping("/{id}")
-    public void updateTask(@PathVariable int id, @RequestBody Task task) {
-        taskService.update(id, task);
+    public void updateTask(@PathVariable int id, @RequestBody TaskUpdateDto task) {
+        taskMapper.updateEntity(task, taskService.getTask(id));
     }
 
     /**
