@@ -5,6 +5,9 @@ import com.example.demo.model.Task;
 import com.example.demo.service.TaskService;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -68,7 +71,7 @@ public class TaskController {
      * @param task объект задачи для создания
      */
     @PostMapping
-    public void createTask(@RequestBody TaskCreateDto task) {
+    public void createTask(@RequestBody @Validated(OnCreate.class) TaskCreateDto task) {
         taskService.addTask(taskMapper.toEntity(task));
     }
 
@@ -79,7 +82,7 @@ public class TaskController {
      * @param task объект задачи с новыми данными
      */
     @PutMapping("/{id}")
-    public void updateTask(@PathVariable int id, @RequestBody TaskUpdateDto task) {
+    public void updateTask(@PathVariable int id, @RequestBody @Validated(OnUpdate.class) TaskUpdateDto task) {
         taskMapper.updateEntity(task, taskService.getTask(id));
     }
 
