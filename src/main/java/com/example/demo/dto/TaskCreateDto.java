@@ -8,14 +8,19 @@ import java.time.LocalDate;
 import java.util.Set;
 
 public record TaskCreateDto (
-        @NotNull
-        @Size(min=3, max=100)
+        @NotNull(groups = OnCreate.class)
+        @Size(min=3, max=100, groups = OnCreate.class)
         String title,
-        @Size(max=500)
+
+        @Size(max=500, groups = OnCreate.class)
         String description,
-        @FutureOrPresent
+
+        @FutureOrPresent(groups = OnCreate.class)
         LocalDate dueTime,
-        @NotNull
+
+        @NotNull(groups = OnCreate.class)
         Priority priority,
-        @Size(max=5)
-        Set<String> tags) { }
+
+        @Size(max=5, groups = OnCreate.class)
+        Set<String> tags
+) { }
