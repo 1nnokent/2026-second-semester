@@ -17,11 +17,11 @@ public class TaskAttachmentRepository {
         return attachments;
     }
 
-    void add(TaskAttachment taskAttachment) {
+    public void add(TaskAttachment taskAttachment) {
         attachments.add(taskAttachment);
     }
 
-    void delete(int taskAttachmentId) {
+    public void delete(int taskAttachmentId) {
         for (TaskAttachment currentAttachment : attachments) {
             if (currentAttachment.id() == taskAttachmentId) {
                 attachments.remove(currentAttachment);
@@ -30,7 +30,7 @@ public class TaskAttachmentRepository {
         }
     }
 
-    TaskAttachment get(int taskAttachmentId) {
+    public TaskAttachment get(int taskAttachmentId) {
         for (TaskAttachment currentAttachment : attachments) {
             if (currentAttachment.id() == taskAttachmentId) {
                 return currentAttachment;
@@ -39,7 +39,7 @@ public class TaskAttachmentRepository {
         return null;
     }
 
-    List<TaskAttachment> getAll() {
+    public List<TaskAttachment> getAll() {
         return attachments;
     }
 }
