@@ -1,10 +1,11 @@
 package com.example.demo.dto;
 
 import com.example.demo.model.Priority;
+import com.example.demo.validation.OnUpdate;
 import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.Size;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Set;
 
 public record TaskUpdateDto(
@@ -17,7 +18,7 @@ public record TaskUpdateDto(
         Boolean completed,
 
         @FutureOrPresent(groups = OnUpdate.class)
-        LocalDate dueTime,
+        LocalDateTime dueDate,
 
         Priority priority,
 

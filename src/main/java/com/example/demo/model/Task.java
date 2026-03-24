@@ -33,7 +33,7 @@ public class Task {
 
     LocalDateTime createdAt;
 
-    LocalDate dueDate;
+    LocalDateTime dueDate;
 
     Priority priority;
 
@@ -124,6 +124,14 @@ public class Task {
      */
     public boolean getCompleted() {
         return this.completed;
+    }
+
+    public LocalDateTime getDueDate() {
+        return this.dueDate;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return this.createdAt;
     }
 
     /**

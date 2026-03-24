@@ -1,6 +1,7 @@
 package com.example.demo.dto;
 
 import com.example.demo.model.Priority;
+import com.example.demo.validation.OnCreate;
 import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -16,7 +17,7 @@ public record TaskCreateDto (
         String description,
 
         @FutureOrPresent(groups = OnCreate.class)
-        LocalDate dueTime,
+        LocalDateTime dueDate,
 
         @NotNull(groups = OnCreate.class)
         Priority priority,
