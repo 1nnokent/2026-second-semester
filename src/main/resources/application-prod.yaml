@@ -1,0 +1,11 @@
+server:
+  port: 8080
+
+app:
+  name: To-Do List API [PROD]
+  version: 2.0.0
+
+logging:
+  level:
+    root: WARN
+    com.example.demo: INFO
