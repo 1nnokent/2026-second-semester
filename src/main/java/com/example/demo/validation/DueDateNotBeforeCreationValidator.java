@@ -7,31 +7,40 @@ import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 import jakarta.validation.constraintvalidation.SupportedValidationTarget;
 import jakarta.validation.constraintvalidation.ValidationTarget;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
+@Component
 @SupportedValidationTarget(ValidationTarget.PARAMETERS)
 public class DueDateNotBeforeCreationValidator
         implements ConstraintValidator<DueDateNotBeforeCreation, Object[]> {
 
-    @Autowired
-    private TaskRepository taskRepository;
+    private final TaskRepository taskRepository;
+
+    public DueDateNotBeforeCreationValidator(TaskRepository taskRepository) {
+        this.taskRepository = taskRepository;
+    }
 
     @Override
-    public boolean isValid(Object[] params, ConstraintValidatorContext context) {
-        Integer id = (Integer) params[0];
-        TaskUpdateDto dto = (TaskUpdateDto) params[1];
+    public boolean isValid(Object[] parameters, ConstraintValidatorContext context) {
+        if (parameters == null || parameters.length < 2) {
+            return true;
+        }
+
+        Object rawTaskId = parameters[0];
+        Object rawDto = parameters[1];
+        if (!(rawTaskId instanceof Integer taskId) || !(rawDto instanceof TaskUpdateDto dto)) {
+            return true;
+        }
 
         if (dto.dueDate() == null) {
             return true;
         }
 
-        Task task = taskRepository.get(id);
-        boolean valid = !dto.dueDate().isBefore(task.getCreatedAt());
-        if (!valid) {
-            context.disableDefaultConstraintViolation();
-            context.buildConstraintViolationWithTemplate(context.getDefaultConstraintMessageTemplate())
-                    .addPropertyNode("dueDate").addConstraintViolation();
+        Task task = taskRepository.get(taskId);
+        if (task == null || task.getCreatedAt() == null) {
+            return true;
         }
-        return true;
+
+        return !dto.dueDate().isBefore(task.getCreatedAt().toLocalDate());
     }
 }

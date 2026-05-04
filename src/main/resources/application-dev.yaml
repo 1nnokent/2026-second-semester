@@ -2,13 +2,10 @@ server:
   port: 8081
 
 app:
-  name: Lenchevsky Maxim [DEV]
-  version: 1.0.0
+  name: To-Do List API [DEV]
+  version: 2.0.0
 
 logging:
   level:
     root: DEBUG
     com.example.demo: DEBUG
-    org.springframework.web: DEBUG
-
-debug: true

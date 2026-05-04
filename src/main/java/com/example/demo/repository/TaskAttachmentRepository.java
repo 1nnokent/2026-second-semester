@@ -1,45 +1,46 @@
 package com.example.demo.repository;
 
-import com.example.demo.model.Task;
 import com.example.demo.model.TaskAttachment;
-
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import org.springframework.stereotype.Repository;
 
+@Repository
 public class TaskAttachmentRepository {
-    List<TaskAttachment> attachments;
 
-    public TaskAttachmentRepository() {
-        attachments = new ArrayList<>();
+    private final List<TaskAttachment> attachments = new ArrayList<>();
+
+    public void add(TaskAttachment attachment) {
+        attachments.add(attachment);
     }
 
-    public List<TaskAttachment> getAttachments() {
-        return attachments;
-    }
-
-    public void add(TaskAttachment taskAttachment) {
-        attachments.add(taskAttachment);
-    }
-
-    public void delete(int taskAttachmentId) {
-        for (TaskAttachment currentAttachment : attachments) {
-            if (currentAttachment.id() == taskAttachmentId) {
-                attachments.remove(currentAttachment);
-                break;
-            }
-        }
-    }
-
-    public TaskAttachment get(int taskAttachmentId) {
-        for (TaskAttachment currentAttachment : attachments) {
-            if (currentAttachment.id() == taskAttachmentId) {
-                return currentAttachment;
+    public TaskAttachment get(Long attachmentId) {
+        for (TaskAttachment attachment : attachments) {
+            if (attachment.id().equals(attachmentId)) {
+                return attachment;
             }
         }
         return null;
     }
 
+    public void delete(Long attachmentId) {
+        Iterator<TaskAttachment> iterator = attachments.iterator();
+        while (iterator.hasNext()) {
+            if (iterator.next().id().equals(attachmentId)) {
+                iterator.remove();
+                return;
+            }
+        }
+    }
+
     public List<TaskAttachment> getAll() {
         return attachments;
+    }
+
+    public List<TaskAttachment> findAllByTaskId(Long taskId) {
+        return attachments.stream()
+                .filter(attachment -> attachment.taskId().equals(taskId))
+                .toList();
     }
 }

@@ -2,9 +2,21 @@ server:
   port: 8080
 
 app:
-  name: Lenchevsky Maxim
-  version: 1.0.0
+  name: To-Do List API
+  version: 2.0.0
+  upload:
+    dir: uploads
 
 spring:
   profiles:
     active: prod
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+  mvc:
+    throw-exception-if-no-handler-found: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html

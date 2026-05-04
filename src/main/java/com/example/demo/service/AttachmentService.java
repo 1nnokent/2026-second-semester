@@ -1,83 +1,99 @@
 package com.example.demo.service;
 
+import com.example.demo.exception.AttachmentNotFoundException;
 import com.example.demo.model.TaskAttachment;
 import com.example.demo.repository.TaskAttachmentRepository;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
-import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
-
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class AttachmentService {
 
-    @Value("${app.upload.dir}")
-    private String uploadDir;
-
     private final TaskAttachmentRepository attachmentRepository;
-    private Long idSequence = 1L;
+    private final TaskService taskService;
+    private final AtomicLong idSequence = new AtomicLong(1L);
+    private final Path uploadPath;
 
-    public AttachmentService(TaskAttachmentRepository attachmentRepository) {
+    public AttachmentService(TaskAttachmentRepository attachmentRepository,
+            TaskService taskService,
+            @Value("${app.upload.dir}") String uploadDir) {
         this.attachmentRepository = attachmentRepository;
+        this.taskService = taskService;
+        this.uploadPath = Path.of(uploadDir).toAbsolutePath().normalize();
     }
 
     public TaskAttachment storeAttachment(Long taskId, MultipartFile file) throws IOException {
-        Path uploadPath = Paths.get(uploadDir);
-        if (!Files.exists(uploadPath)) {
-            Files.createDirectories(uploadPath);
+        taskService.getTask(taskId.intValue());
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("Attachment file must not be empty");
         }
 
-        String storedFileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
-        Files.copy(file.getInputStream(), uploadPath.resolve(storedFileName));
+        Files.createDirectories(uploadPath);
+
+        String originalFileName = StringUtils.cleanPath(file.getOriginalFilename());
+        String extension = StringUtils.getFilenameExtension(originalFileName);
+        String storedFileName = extension == null || extension.isBlank()
+                ? UUID.randomUUID().toString()
+                : UUID.randomUUID() + "." + extension;
+
+        Path targetFile = uploadPath.resolve(storedFileName);
+        try (InputStream inputStream = file.getInputStream()) {
+            Files.copy(inputStream, targetFile, StandardCopyOption.REPLACE_EXISTING);
+        }
 
         TaskAttachment attachment = new TaskAttachment(
-                idSequence++,
+                idSequence.getAndIncrement(),
                 taskId,
-                file.getOriginalFilename(),
+                originalFileName,
                 storedFileName,
                 file.getContentType(),
                 file.getSize(),
                 LocalDateTime.now()
         );
-
         attachmentRepository.add(attachment);
         return attachment;
     }
 
     public TaskAttachment getAttachment(Long attachmentId) {
-        TaskAttachment attachment = attachmentRepository.get(attachmentId.intValue());
+        TaskAttachment attachment = attachmentRepository.get(attachmentId);
         if (attachment == null) {
-            throw new RuntimeException("Файл не найден: " + attachmentId);
+            throw new AttachmentNotFoundException(attachmentId);
         }
         return attachment;
     }
 
     public Resource loadAsResource(Long attachmentId) throws IOException {
         TaskAttachment attachment = getAttachment(attachmentId);
-
-        Path filePath = Paths.get(uploadDir).resolve(attachment.storedFileName());
+        Path filePath = uploadPath.resolve(attachment.storedFileName()).normalize();
         Resource resource = new UrlResource(filePath.toUri());
 
         if (!resource.exists() || !resource.isReadable()) {
-            throw new IOException("Файл не найден на диске: " + attachment.storedFileName());
+            throw new AttachmentNotFoundException(attachmentId);
         }
-
         return resource;
     }
 
     public void deleteAttachment(Long attachmentId) throws IOException {
         TaskAttachment attachment = getAttachment(attachmentId);
+        Files.deleteIfExists(uploadPath.resolve(attachment.storedFileName()));
+        attachmentRepository.delete(attachmentId);
+    }
 
-        Files.deleteIfExists(Paths.get(uploadDir).resolve(attachment.storedFileName()));
-        attachmentRepository.delete(attachmentId.intValue());
+    public List<TaskAttachment> getAttachmentsByTaskId(Long taskId) {
+        taskService.getTask(taskId.intValue());
+        return attachmentRepository.findAllByTaskId(taskId);
     }
 }

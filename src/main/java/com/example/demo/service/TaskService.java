@@ -1,118 +1,73 @@
 package com.example.demo.service;
 
+import com.example.demo.exception.TaskNotFoundException;
 import com.example.demo.model.Task;
 import com.example.demo.repository.TaskRepository;
 import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
-import java.util.HashMap;
+import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
-import java.util.Map;
-import org.springframework.beans.factory.annotation.Value;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
-/**
- * Сервис для управления задачами. Обеспечивает бизнес-логику работы с задачами, делегируя операции
- * хранения данных в TaskRepository. Поддерживает кэширование задач в памяти для оптимизации
- * доступа.
- */
 @Service
 public class TaskService {
 
-    /**
-     * Репозиторий для хранения и получения задач
-     */
     private final TaskRepository taskRepository;
-    /**
-     * Кэш задач в памяти для быстрого доступа
-     */
-    private Map<String, Task> taskCache;
+    private final AtomicInteger idSequence = new AtomicInteger(1);
 
-    /**
-     * Название приложения, внедряемое из конфигурации
-     */
-    @Value("${app.name}")
-    private String appName;
-
-    /**
-     * Конструктор сервиса с внедрением зависимости репозитория.
-     *
-     * @param taskRepository репозиторий для работы с задачами
-     */
     public TaskService(TaskRepository taskRepository) {
         this.taskRepository = taskRepository;
     }
 
-    /**
-     * Метод инициализации, вызываемый после внедрения всех зависимостей. Инициализирует кэш задач и
-     * загружает в него все задачи из репозитория. Выполняется автоматически при создании bean'а
-     * Spring.
-     */
     @PostConstruct
     public void postConstruct() {
-        taskCache = new HashMap<>();
-
-        List<Task> tasks = taskRepository.getAll();
-        for (Task task : tasks) {
-            taskCache.put(Integer.toString(task.getId()), task);
-        }
+        int nextId = taskRepository.getAll().stream()
+                .mapToInt(Task::getId)
+                .max()
+                .orElse(0) + 1;
+        idSequence.set(nextId);
     }
 
-    /**
-     * Метод очистки, вызываемый перед уничтожением bean'а. Логирует количество задач в кэше и
-     * очищает кэш. Выполняется автоматически при завершении работы приложения.
-     */
-    @PreDestroy
-    public void preDestroy() {
-        System.out.println(
-                "TaskService PreDestroy: в taskCache находилось " + taskCache.size() + " задач. "
-                        + appName + ". Подписаться.");
-        taskCache.clear();
-    }
-
-    /**
-     * Добавляет новую задачу.
-     *
-     * @param task задача для добавления
-     */
-    public void addTask(Task task) {
+    public Task addTask(Task task) {
+        task.setId(idSequence.getAndIncrement());
+        task.setCreatedAt(LocalDateTime.now());
         taskRepository.add(task);
+        return task;
     }
 
-    /**
-     * Удаляет задачу по идентификатору.
-     *
-     * @param taskId идентификатор задачи для удаления
-     */
     public void deleteTask(int taskId) {
+        getTask(taskId);
         taskRepository.delete(taskId);
     }
 
-    /**
-     * Получает задачу по идентификатору.
-     *
-     * @param taskId идентификатор задачи
-     * @return задача с указанным идентификатором
-     */
     public Task getTask(int taskId) {
-        return taskRepository.get(taskId);
+        Task task = taskRepository.get(taskId);
+        if (task == null) {
+            throw new TaskNotFoundException(taskId);
+        }
+        return task;
     }
 
-    /**
-     * Обновляет существующую задачу.
-     *
-     * @param taskId идентификатор задачи для обновления
-     * @param task   новый объект задачи с обновленными данными
-     */
-    public void update(int taskId, Task task) {
+    public Task update(int taskId, Task task) {
+        getTask(taskId);
         taskRepository.update(taskId, task);
+        return task;
     }
 
-    /**
-     * Получает список всех задач.
-     *
-     * @return список всех задач
-     */
     public List<Task> getAllTasks() {
         return taskRepository.getAll();
+    }
+
+    public int getTaskCount() {
+        return taskRepository.getAll().size();
+    }
+
+    public List<Task> getTasksByIds(Collection<Integer> taskIds) {
+        return taskIds.stream()
+                .map(taskRepository::get)
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toList());
     }
 }

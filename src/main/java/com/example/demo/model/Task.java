@@ -1,52 +1,27 @@
 package com.example.demo.model;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
 
-/**
- * Модель данных для представления задачи (task). Содержит основную информацию о задаче:
- * идентификатор, название, описание и статус выполнения.
- */
+@Schema(description = "Internal task entity stored by the application")
 public class Task {
 
-    /**
-     * Уникальный идентификатор задачи
-     */
     private int id;
-
-    /**
-     * Название задачи
-     */
     private String title;
-
-    /**
-     * Описание задачи
-     */
     private String description;
-
-    /**
-     * Статус выполнения задачи (true - выполнена, false - не выполнена)
-     */
     private boolean completed;
+    private LocalDateTime createdAt;
+    private LocalDate dueDate;
+    private Priority priority;
+    private Set<String> tags = new LinkedHashSet<>();
 
-    LocalDateTime createdAt;
+    public Task() {
+    }
 
-    LocalDateTime dueDate;
-
-    Priority priority;
-
-    Set<String> tags;
-
-    /**
-     * Конструктор для создания задачи со всеми параметрами.
-     *
-     * @param id          уникальный идентификатор задачи
-     * @param title       название задачи
-     * @param description описание задачи
-     * @param completed   статус выполнения задачи
-     */
     public Task(int id, String title, String description, boolean completed) {
         this.id = id;
         this.title = title;
@@ -54,127 +29,119 @@ public class Task {
         this.completed = completed;
     }
 
-    /**
-     * Устанавливает идентификатор задачи.
-     *
-     * @param id новый идентификатор задачи
-     */
+    public Task(int id, String title, String description, boolean completed,
+            LocalDateTime createdAt, LocalDate dueDate, Priority priority, Set<String> tags) {
+        this.id = id;
+        this.title = title;
+        this.description = description;
+        this.completed = completed;
+        this.createdAt = createdAt;
+        this.dueDate = dueDate;
+        this.priority = priority;
+        setTags(tags);
+    }
+
+    public int getId() {
+        return id;
+    }
+
     public void setId(int id) {
         this.id = id;
     }
 
-    /**
-     * Устанавливает название задачи.
-     *
-     * @param title новое название задачи
-     */
+    public String getTitle() {
+        return title;
+    }
+
     public void setTitle(String title) {
         this.title = title;
     }
 
-    /**
-     * Устанавливает описание задачи.
-     *
-     * @param description новое описание задачи
-     */
+    public String getDescription() {
+        return description;
+    }
+
     public void setDescription(String description) {
         this.description = description;
     }
 
-    /**
-     * Устанавливает статус выполнения задачи.
-     *
-     * @param completed новый статус выполнения
-     */
+    public boolean isCompleted() {
+        return completed;
+    }
+
+    public boolean getCompleted() {
+        return completed;
+    }
+
     public void setCompleted(boolean completed) {
         this.completed = completed;
     }
 
-    /**
-     * Возвращает идентификатор задачи.
-     *
-     * @return идентификатор задачи
-     */
-    public int getId() {
-        return this.id;
-    }
-
-    /**
-     * Возвращает название задачи.
-     *
-     * @return название задачи
-     */
-    public String getTitle() {
-        return this.title;
-    }
-
-    /**
-     * Возвращает описание задачи.
-     *
-     * @return описание задачи
-     */
-    public String getDescription() {
-        return this.description;
-    }
-
-    /**
-     * Возвращает статус выполнения задачи.
-     *
-     * @return true если задача выполнена, false в противном случае
-     */
-    public boolean getCompleted() {
-        return this.completed;
-    }
-
-    public LocalDateTime getDueDate() {
-        return this.dueDate;
-    }
-
     public LocalDateTime getCreatedAt() {
-        return this.createdAt;
+        return createdAt;
     }
 
-    /**
-     * Сравнивает эту задачу с другим объектом на равенство. Две задачи считаются равными, если
-     * совпадают все их поля: id, title, description и completed.
-     *
-     * @param obj объект для сравнения
-     * @return true если объекты равны, false в противном случае
-     */
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDate getDueDate() {
+        return dueDate;
+    }
+
+    public void setDueDate(LocalDate dueDate) {
+        this.dueDate = dueDate;
+    }
+
+    public Priority getPriority() {
+        return priority;
+    }
+
+    public void setPriority(Priority priority) {
+        this.priority = priority;
+    }
+
+    public Set<String> getTags() {
+        return tags;
+    }
+
+    public void setTags(Set<String> tags) {
+        this.tags = tags == null ? new LinkedHashSet<>() : new LinkedHashSet<>(tags);
+    }
+
     @Override
     public boolean equals(Object obj) {
-        if (obj == this) {
+        if (this == obj) {
             return true;
         }
-
         if (!(obj instanceof Task other)) {
             return false;
         }
-
-        return this.id == other.id
-                && Objects.equals(this.title, other.title)
-                && Objects.equals(this.description, other.description)
-                && this.completed == other.completed;
+        return id == other.id
+                && completed == other.completed
+                && Objects.equals(title, other.title)
+                && Objects.equals(description, other.description)
+                && Objects.equals(createdAt, other.createdAt)
+                && Objects.equals(dueDate, other.dueDate)
+                && priority == other.priority
+                && Objects.equals(tags, other.tags);
     }
 
-    /**
-     * Возвращает хеш-код задачи на основе всех полей.
-     *
-     * @return хеш-код объекта
-     */
     @Override
     public int hashCode() {
-        return Objects.hash(id, title, description, completed);
+        return Objects.hash(id, title, description, completed, createdAt, dueDate, priority, tags);
     }
 
-    /**
-     * Возвращает строковое представление задачи в формате JSON-подобной структуры.
-     *
-     * @return строковое представление задачи
-     */
     @Override
     public String toString() {
-        return "{id=" + id + ",title=" + title + ",description=" + description + ",completed="
-                + completed + "}";
+        return "Task{"
+                + "id=" + id
+                + ", title='" + title + '\''
+                + ", completed=" + completed
+                + ", createdAt=" + createdAt
+                + ", dueDate=" + dueDate
+                + ", priority=" + priority
+                + ", tags=" + tags
+                + '}';
     }
 }

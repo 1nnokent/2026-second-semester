@@ -2,12 +2,10 @@ server:
   port: 8080
 
 app:
-  name: Lenchevsky Maxim [PROD]
-  version: 1.0.0
+  name: To-Do List API [PROD]
+  version: 2.0.0
 
 logging:
   level:
     root: WARN
     com.example.demo: INFO
-
-debug: false
