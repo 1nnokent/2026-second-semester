@@ -4,17 +4,19 @@ import com.example.demo.model.Priority;
 import com.example.demo.model.Task;
 import com.example.demo.repository.TaskAttachmentRepository;
 import com.example.demo.repository.TaskRepository;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.LinkedHashSet;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -28,6 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
+@ActiveProfiles("test")
 @AutoConfigureMockMvc
 @TestPropertySource(properties = "app.upload.dir=target/test-uploads")
 class AttachmentControllerTest {
@@ -43,20 +46,14 @@ class AttachmentControllerTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        taskRepository.getAll().clear();
-        attachmentRepository.getAll().clear();
-        Files.createDirectories(Path.of("target/test-uploads"));
-        Files.list(Path.of("target/test-uploads")).forEach(path -> {
-            try {
-                Files.deleteIfExists(path);
-            } catch (Exception ignored) {
-            }
-        });
+        attachmentRepository.deleteAll();
+        taskRepository.deleteAll();
+        cleanUploadDirectory();
     }
 
     @Test
     void shouldUploadAttachmentForExistingTask() throws Exception {
-        taskRepository.add(task(1, "Task with file"));
+        Task task = taskRepository.save(task("Task with file"));
         MockMultipartFile file = new MockMultipartFile(
                 "file",
                 "notes.txt",
@@ -64,7 +61,7 @@ class AttachmentControllerTest {
                 "hello attachment".getBytes()
         );
 
-        mockMvc.perform(multipart("/api/tasks/1/attachments").file(file))
+        mockMvc.perform(multipart("/api/tasks/{taskId}/attachments", task.getId()).file(file))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.fileName").value("notes.txt"))
                 .andExpect(jsonPath("$.size").value(file.getSize()));
@@ -85,38 +82,39 @@ class AttachmentControllerTest {
 
     @Test
     void shouldListAttachmentsForTask() throws Exception {
-        taskRepository.add(task(2, "Task list attachments"));
+        Task task = taskRepository.save(task("Task list attachments"));
         MockMultipartFile file = new MockMultipartFile(
                 "file",
                 "list.txt",
                 "text/plain",
                 "content".getBytes()
         );
-        mockMvc.perform(multipart("/api/tasks/2/attachments").file(file))
+        mockMvc.perform(multipart("/api/tasks/{taskId}/attachments", task.getId()).file(file))
                 .andExpect(status().isCreated());
 
-        mockMvc.perform(get("/api/tasks/2/attachments"))
+        mockMvc.perform(get("/api/tasks/{taskId}/attachments", task.getId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)));
     }
 
     @Test
     void shouldDownloadAttachment() throws Exception {
-        taskRepository.add(task(3, "Task download"));
+        Task task = taskRepository.save(task("Task download"));
         MockMultipartFile file = new MockMultipartFile(
                 "file",
                 "download.txt",
                 "text/plain",
                 "download me".getBytes()
         );
-        mockMvc.perform(multipart("/api/tasks/3/attachments").file(file))
+        mockMvc.perform(multipart("/api/tasks/{taskId}/attachments", task.getId()).file(file))
                 .andExpect(status().isCreated());
 
-        Long attachmentId = attachmentRepository.getAll().getFirst().id();
+        Long attachmentId = attachmentRepository.findAll().getFirst().getId();
 
         mockMvc.perform(get("/api/attachments/{attachmentId}", attachmentId))
                 .andExpect(status().isOk())
-                .andExpect(header().string("Content-Disposition", org.hamcrest.Matchers.containsString("download.txt")))
+                .andExpect(header().string("Content-Disposition",
+                        org.hamcrest.Matchers.containsString("download.txt")))
                 .andExpect(content().string("download me"));
     }
 
@@ -128,17 +126,17 @@ class AttachmentControllerTest {
 
     @Test
     void shouldDeleteAttachment() throws Exception {
-        taskRepository.add(task(4, "Task delete attachment"));
+        Task task = taskRepository.save(task("Task delete attachment"));
         MockMultipartFile file = new MockMultipartFile(
                 "file",
                 "delete.txt",
                 "text/plain",
                 "delete me".getBytes()
         );
-        mockMvc.perform(multipart("/api/tasks/4/attachments").file(file))
+        mockMvc.perform(multipart("/api/tasks/{taskId}/attachments", task.getId()).file(file))
                 .andExpect(status().isCreated());
 
-        Long attachmentId = attachmentRepository.getAll().getFirst().id();
+        Long attachmentId = attachmentRepository.findAll().getFirst().getId();
 
         mockMvc.perform(delete("/api/attachments/{attachmentId}", attachmentId))
                 .andExpect(status().isNoContent());
@@ -147,16 +145,27 @@ class AttachmentControllerTest {
                 .andExpect(status().isNotFound());
     }
 
-    private Task task(int id, String title) {
-        return new Task(
-                id,
-                title,
-                "Description for " + title,
-                false,
-                LocalDateTime.now().minusHours(1),
-                LocalDate.now().plusDays(1),
-                Priority.HIGH,
-                new LinkedHashSet<>()
-        );
+    private void cleanUploadDirectory() throws IOException {
+        Path uploadDir = Path.of("target/test-uploads");
+        Files.createDirectories(uploadDir);
+        try (Stream<Path> files = Files.list(uploadDir)) {
+            files.forEach(path -> {
+                try {
+                    Files.deleteIfExists(path);
+                } catch (IOException ignored) {
+                }
+            });
+        }
+    }
+
+    private Task task(String title) {
+        Task task = new Task();
+        task.setTitle(title);
+        task.setDescription("Description for " + title);
+        task.setCompleted(false);
+        task.setDueDate(LocalDate.now().plusDays(1));
+        task.setPriority(Priority.HIGH);
+        task.setTags(new LinkedHashSet<>());
+        return task;
     }
 }

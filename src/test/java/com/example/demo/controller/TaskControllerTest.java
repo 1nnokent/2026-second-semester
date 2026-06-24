@@ -7,7 +7,6 @@ import com.example.demo.model.Task;
 import com.example.demo.repository.TaskRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.hamcrest.Matchers.hasSize;
@@ -28,6 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
+@ActiveProfiles("test")
 @AutoConfigureMockMvc
 class TaskControllerTest {
 
@@ -42,13 +43,12 @@ class TaskControllerTest {
 
     @BeforeEach
     void setUp() {
-        taskRepository.getAll().clear();
+        taskRepository.deleteAll();
     }
 
     @Test
     void shouldReturnAllTasksWithTotalCountHeader() throws Exception {
-        taskRepository.add(task(1, "Task one"));
-        taskRepository.add(task(2, "Task two"));
+        taskRepository.saveAll(java.util.List.of(task("Task one"), task("Task two")));
 
         mockMvc.perform(get("/api/tasks"))
                 .andExpect(status().isOk())
@@ -97,11 +97,11 @@ class TaskControllerTest {
 
     @Test
     void shouldReturnTaskById() throws Exception {
-        taskRepository.add(task(7, "Existing task"));
+        Task task = taskRepository.save(task("Existing task"));
 
-        mockMvc.perform(get("/api/tasks/7"))
+        mockMvc.perform(get("/api/tasks/{id}", task.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(7))
+                .andExpect(jsonPath("$.id").value(task.getId()))
                 .andExpect(jsonPath("$.title").value("Existing task"));
     }
 
@@ -114,9 +114,7 @@ class TaskControllerTest {
 
     @Test
     void shouldUpdateTaskWhenPayloadIsValid() throws Exception {
-        Task existingTask = task(5, "Old title");
-        existingTask.setDueDate(LocalDate.now().plusDays(3));
-        taskRepository.add(existingTask);
+        Task existingTask = taskRepository.save(task("Old title"));
 
         TaskUpdateDto request = new TaskUpdateDto(
                 "New title",
@@ -127,7 +125,7 @@ class TaskControllerTest {
                 Set.of("updated")
         );
 
-        mockMvc.perform(put("/api/tasks/5")
+        mockMvc.perform(put("/api/tasks/{id}", existingTask.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -138,9 +136,7 @@ class TaskControllerTest {
 
     @Test
     void shouldReturnBadRequestWhenDueDateIsBeforeCreationDate() throws Exception {
-        Task existingTask = task(10, "Deadline task");
-        existingTask.setCreatedAt(LocalDateTime.now());
-        taskRepository.add(existingTask);
+        Task existingTask = taskRepository.save(task("Deadline task"));
 
         TaskUpdateDto request = new TaskUpdateDto(
                 "Deadline task",
@@ -151,7 +147,7 @@ class TaskControllerTest {
                 null
         );
 
-        mockMvc.perform(put("/api/tasks/10")
+        mockMvc.perform(put("/api/tasks/{id}", existingTask.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
@@ -159,25 +155,23 @@ class TaskControllerTest {
 
     @Test
     void shouldDeleteTask() throws Exception {
-        taskRepository.add(task(15, "Delete me"));
+        Task task = taskRepository.save(task("Delete me"));
 
-        mockMvc.perform(delete("/api/tasks/15"))
+        mockMvc.perform(delete("/api/tasks/{id}", task.getId()))
                 .andExpect(status().isNoContent());
 
-        mockMvc.perform(get("/api/tasks/15"))
+        mockMvc.perform(get("/api/tasks/{id}", task.getId()))
                 .andExpect(status().isNotFound());
     }
 
-    private Task task(int id, String title) {
-        return new Task(
-                id,
-                title,
-                "Description for " + title,
-                false,
-                LocalDateTime.now().minusHours(1),
-                LocalDate.now().plusDays(1),
-                Priority.MEDIUM,
-                new LinkedHashSet<>()
-        );
+    private Task task(String title) {
+        Task task = new Task();
+        task.setTitle(title);
+        task.setDescription("Description for " + title);
+        task.setCompleted(false);
+        task.setDueDate(LocalDate.now().plusDays(1));
+        task.setPriority(Priority.MEDIUM);
+        task.setTags(new LinkedHashSet<>());
+        return task;
     }
 }

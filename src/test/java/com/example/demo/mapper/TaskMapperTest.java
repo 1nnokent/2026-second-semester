@@ -39,7 +39,7 @@ class TaskMapperTest {
     @Test
     void shouldUpdateOnlyProvidedFields() {
         Task task = new Task(
-                1,
+                1L,
                 "Original",
                 "Original description",
                 false,
