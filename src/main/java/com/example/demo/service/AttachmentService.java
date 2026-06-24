@@ -1,6 +1,7 @@
 package com.example.demo.service;
 
 import com.example.demo.exception.AttachmentNotFoundException;
+import com.example.demo.model.Task;
 import com.example.demo.model.TaskAttachment;
 import com.example.demo.repository.TaskAttachmentRepository;
 import java.io.IOException;
@@ -8,23 +9,22 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicLong;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
+@Transactional(readOnly = true)
 public class AttachmentService {
 
     private final TaskAttachmentRepository attachmentRepository;
     private final TaskService taskService;
-    private final AtomicLong idSequence = new AtomicLong(1L);
     private final Path uploadPath;
 
     public AttachmentService(TaskAttachmentRepository attachmentRepository,
@@ -35,8 +35,9 @@ public class AttachmentService {
         this.uploadPath = Path.of(uploadDir).toAbsolutePath().normalize();
     }
 
+    @Transactional(rollbackFor = IOException.class)
     public TaskAttachment storeAttachment(Long taskId, MultipartFile file) throws IOException {
-        taskService.getTask(taskId.intValue());
+        Task task = taskService.getTask(taskId);
         if (file.isEmpty()) {
             throw new IllegalArgumentException("Attachment file must not be empty");
         }
@@ -54,30 +55,28 @@ public class AttachmentService {
             Files.copy(inputStream, targetFile, StandardCopyOption.REPLACE_EXISTING);
         }
 
-        TaskAttachment attachment = new TaskAttachment(
-                idSequence.getAndIncrement(),
-                taskId,
-                originalFileName,
-                storedFileName,
-                file.getContentType(),
-                file.getSize(),
-                LocalDateTime.now()
-        );
-        attachmentRepository.add(attachment);
-        return attachment;
+        try {
+            TaskAttachment attachment = new TaskAttachment();
+            attachment.setTask(task);
+            attachment.setFileName(originalFileName);
+            attachment.setStoredFileName(storedFileName);
+            attachment.setContentType(file.getContentType());
+            attachment.setSize(file.getSize());
+            return attachmentRepository.saveAndFlush(attachment);
+        } catch (RuntimeException exception) {
+            Files.deleteIfExists(targetFile);
+            throw exception;
+        }
     }
 
     public TaskAttachment getAttachment(Long attachmentId) {
-        TaskAttachment attachment = attachmentRepository.get(attachmentId);
-        if (attachment == null) {
-            throw new AttachmentNotFoundException(attachmentId);
-        }
-        return attachment;
+        return attachmentRepository.findById(attachmentId)
+                .orElseThrow(() -> new AttachmentNotFoundException(attachmentId));
     }
 
     public Resource loadAsResource(Long attachmentId) throws IOException {
         TaskAttachment attachment = getAttachment(attachmentId);
-        Path filePath = uploadPath.resolve(attachment.storedFileName()).normalize();
+        Path filePath = uploadPath.resolve(attachment.getStoredFileName()).normalize();
         Resource resource = new UrlResource(filePath.toUri());
 
         if (!resource.exists() || !resource.isReadable()) {
@@ -86,14 +85,16 @@ public class AttachmentService {
         return resource;
     }
 
+    @Transactional(rollbackFor = IOException.class)
     public void deleteAttachment(Long attachmentId) throws IOException {
         TaskAttachment attachment = getAttachment(attachmentId);
-        Files.deleteIfExists(uploadPath.resolve(attachment.storedFileName()));
-        attachmentRepository.delete(attachmentId);
+        attachmentRepository.delete(attachment);
+        attachmentRepository.flush();
+        Files.deleteIfExists(uploadPath.resolve(attachment.getStoredFileName()));
     }
 
     public List<TaskAttachment> getAttachmentsByTaskId(Long taskId) {
-        taskService.getTask(taskId.intValue());
-        return attachmentRepository.findAllByTaskId(taskId);
+        taskService.getTask(taskId);
+        return attachmentRepository.findAllByTask_IdOrderByUploadedAtAsc(taskId);
     }
 }

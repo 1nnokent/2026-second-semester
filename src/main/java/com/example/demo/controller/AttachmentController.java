@@ -49,7 +49,7 @@ public class AttachmentController {
             @PathVariable Long taskId,
             @RequestParam("file") MultipartFile file) throws IOException {
         TaskAttachment attachment = attachmentService.storeAttachment(taskId, file);
-        return ResponseEntity.created(URI.create("/api/attachments/" + attachment.id()))
+        return ResponseEntity.created(URI.create("/api/attachments/" + attachment.getId()))
                 .body(toResponseDto(attachment));
     }
 
@@ -64,15 +64,15 @@ public class AttachmentController {
         TaskAttachment attachment = attachmentService.getAttachment(attachmentId);
         Resource resource = attachmentService.loadAsResource(attachmentId);
 
-        MediaType mediaType = attachment.contentType() == null
+        MediaType mediaType = attachment.getContentType() == null
                 ? MediaType.APPLICATION_OCTET_STREAM
-                : MediaType.parseMediaType(attachment.contentType());
+                : MediaType.parseMediaType(attachment.getContentType());
 
         return ResponseEntity.ok()
                 .contentType(mediaType)
-                .contentLength(attachment.size())
+                .contentLength(attachment.getSize())
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
-                        .filename(attachment.fileName())
+                        .filename(attachment.getFileName())
                         .build()
                         .toString())
                 .body(resource);
@@ -105,10 +105,10 @@ public class AttachmentController {
 
     private AttachmentResponseDto toResponseDto(TaskAttachment attachment) {
         return new AttachmentResponseDto(
-                attachment.id(),
-                attachment.fileName(),
-                attachment.size(),
-                attachment.uploadedAt()
+                attachment.getId(),
+                attachment.getFileName(),
+                attachment.getSize(),
+                attachment.getUploadedAt()
         );
     }
 }

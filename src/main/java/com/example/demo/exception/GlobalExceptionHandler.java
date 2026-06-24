@@ -78,6 +78,12 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request, Map.of());
     }
 
+    @ExceptionHandler(TaskBulkOperationException.class)
+    public org.springframework.http.ResponseEntity<ErrorResponse> handleTaskBulkOperation(
+            TaskBulkOperationException exception, HttpServletRequest request) {
+        return buildResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request, Map.of());
+    }
+
     @ExceptionHandler(AttachmentNotFoundException.class)
     public org.springframework.http.ResponseEntity<ErrorResponse> handleAttachmentNotFound(
             AttachmentNotFoundException exception, HttpServletRequest request) {

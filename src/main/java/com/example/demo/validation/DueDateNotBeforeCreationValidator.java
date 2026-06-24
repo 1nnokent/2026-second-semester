@@ -28,7 +28,7 @@ public class DueDateNotBeforeCreationValidator
 
         Object rawTaskId = parameters[0];
         Object rawDto = parameters[1];
-        if (!(rawTaskId instanceof Integer taskId) || !(rawDto instanceof TaskUpdateDto dto)) {
+        if (!(rawTaskId instanceof Long taskId) || !(rawDto instanceof TaskUpdateDto dto)) {
             return true;
         }
 
@@ -36,7 +36,7 @@ public class DueDateNotBeforeCreationValidator
             return true;
         }
 
-        Task task = taskRepository.get(taskId);
+        Task task = taskRepository.findById(taskId).orElse(null);
         if (task == null || task.getCreatedAt() == null) {
             return true;
         }

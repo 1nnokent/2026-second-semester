@@ -2,7 +2,7 @@ package com.example.demo.exception;
 
 public class TaskNotFoundException extends RuntimeException {
 
-    public TaskNotFoundException(int taskId) {
+    public TaskNotFoundException(Long taskId) {
         super("Task with id " + taskId + " was not found");
     }
 }

@@ -10,23 +10,23 @@ public class FavoritesService {
 
     public static final String FAVORITE_TASK_IDS = "favoriteTaskIds";
 
-    public void addToFavorites(int taskId, HttpSession session) {
-        Set<Integer> favoriteTaskIds = getFavoriteTaskIds(session);
+    public void addToFavorites(Long taskId, HttpSession session) {
+        Set<Long> favoriteTaskIds = getFavoriteTaskIds(session);
         favoriteTaskIds.add(taskId);
         session.setAttribute(FAVORITE_TASK_IDS, favoriteTaskIds);
     }
 
-    public void removeFromFavorites(int taskId, HttpSession session) {
-        Set<Integer> favoriteTaskIds = getFavoriteTaskIds(session);
+    public void removeFromFavorites(Long taskId, HttpSession session) {
+        Set<Long> favoriteTaskIds = getFavoriteTaskIds(session);
         favoriteTaskIds.remove(taskId);
         session.setAttribute(FAVORITE_TASK_IDS, favoriteTaskIds);
     }
 
     @SuppressWarnings("unchecked")
-    public Set<Integer> getFavoriteTaskIds(HttpSession session) {
+    public Set<Long> getFavoriteTaskIds(HttpSession session) {
         Object favoriteTaskIds = session.getAttribute(FAVORITE_TASK_IDS);
         if (favoriteTaskIds instanceof Set<?> storedIds) {
-            return new LinkedHashSet<>((Set<Integer>) storedIds);
+            return new LinkedHashSet<>((Set<Long>) storedIds);
         }
         return new LinkedHashSet<>();
     }

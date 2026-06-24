@@ -1,73 +1,108 @@
 package com.example.demo.service;
 
+import com.example.demo.exception.TaskBulkOperationException;
 import com.example.demo.exception.TaskNotFoundException;
 import com.example.demo.model.Task;
 import com.example.demo.repository.TaskRepository;
-import jakarta.annotation.PostConstruct;
-import java.time.LocalDateTime;
 import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
+import java.util.Map;
+import java.util.Set;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Transactional(readOnly = true)
 public class TaskService {
 
     private final TaskRepository taskRepository;
-    private final AtomicInteger idSequence = new AtomicInteger(1);
 
     public TaskService(TaskRepository taskRepository) {
         this.taskRepository = taskRepository;
     }
 
-    @PostConstruct
-    public void postConstruct() {
-        int nextId = taskRepository.getAll().stream()
-                .mapToInt(Task::getId)
-                .max()
-                .orElse(0) + 1;
-        idSequence.set(nextId);
-    }
-
+    @Transactional
     public Task addTask(Task task) {
-        task.setId(idSequence.getAndIncrement());
-        task.setCreatedAt(LocalDateTime.now());
-        taskRepository.add(task);
-        return task;
+        return taskRepository.save(task);
     }
 
-    public void deleteTask(int taskId) {
+    @Transactional
+    public void deleteTask(Long taskId) {
+        Task task = getTask(taskId);
+        taskRepository.delete(task);
+    }
+
+    public Task getTask(Long taskId) {
+        return taskRepository.findById(taskId)
+                .orElseThrow(() -> new TaskNotFoundException(taskId));
+    }
+
+    @Transactional
+    public Task update(Long taskId, Task task) {
         getTask(taskId);
-        taskRepository.delete(taskId);
-    }
-
-    public Task getTask(int taskId) {
-        Task task = taskRepository.get(taskId);
-        if (task == null) {
-            throw new TaskNotFoundException(taskId);
-        }
-        return task;
-    }
-
-    public Task update(int taskId, Task task) {
-        getTask(taskId);
-        taskRepository.update(taskId, task);
-        return task;
+        return taskRepository.save(task);
     }
 
     public List<Task> getAllTasks() {
-        return taskRepository.getAll();
+        return taskRepository.findAll();
     }
 
-    public int getTaskCount() {
-        return taskRepository.getAll().size();
+    public List<Task> getAllTasksWithAttachments() {
+        List<Task> tasks = taskRepository.findAllWithAttachments();
+        tasks.forEach(task -> task.getAttachments().size());
+        return tasks;
     }
 
-    public List<Task> getTasksByIds(Collection<Integer> taskIds) {
-        return taskIds.stream()
-                .map(taskRepository::get)
+    public List<Task> getTasksDueWithinNext7Days() {
+        return taskRepository.findTasksDueWithinNext7Days(java.time.LocalDate.now(),
+                java.time.LocalDate.now().plusDays(7));
+    }
+
+    public long getTaskCount() {
+        return taskRepository.count();
+    }
+
+    public List<Task> getTasksByIds(Collection<Long> taskIds) {
+        if (taskIds == null || taskIds.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> orderedIds = taskIds.stream().toList();
+        Map<Long, Task> tasksById = new LinkedHashMap<>();
+        taskRepository.findAllById(orderedIds).forEach(task -> tasksById.put(task.getId(), task));
+
+        return orderedIds.stream()
+                .map(tasksById::get)
                 .filter(java.util.Objects::nonNull)
-                .collect(Collectors.toList());
+                .toList();
+    }
+
+    @Transactional(
+            propagation = Propagation.REQUIRED,
+            isolation = Isolation.READ_COMMITTED,
+            rollbackFor = TaskBulkOperationException.class
+    )
+    public void bulkCompleteTasks(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return;
+        }
+
+        List<Long> uniqueIds = ids.stream().distinct().toList();
+        List<Task> tasks = taskRepository.findAllById(uniqueIds);
+        if (tasks.size() != uniqueIds.size()) {
+            Set<Long> foundIds = tasks.stream()
+                    .map(Task::getId)
+                    .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+            List<Long> missingIds = uniqueIds.stream()
+                    .filter(id -> !foundIds.contains(id))
+                    .toList();
+            throw new TaskBulkOperationException(missingIds);
+        }
+
+        tasks.forEach(task -> task.setCompleted(true));
     }
 }

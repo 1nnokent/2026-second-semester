@@ -43,7 +43,7 @@ public class FavoritesController {
             @ApiResponse(responseCode = "404", description = "Task not found", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @PostMapping("/{taskId}")
-    public ResponseEntity<Void> addToFavorites(@PathVariable int taskId, HttpSession session) {
+    public ResponseEntity<Void> addToFavorites(@PathVariable Long taskId, HttpSession session) {
         taskService.getTask(taskId);
         favoritesService.addToFavorites(taskId, session);
         return ResponseEntity.ok().build();
@@ -54,7 +54,7 @@ public class FavoritesController {
             @ApiResponse(responseCode = "204", description = "Task removed from favorites")
     })
     @DeleteMapping("/{taskId}")
-    public ResponseEntity<Void> removeFromFavorites(@PathVariable int taskId, HttpSession session) {
+    public ResponseEntity<Void> removeFromFavorites(@PathVariable Long taskId, HttpSession session) {
         favoritesService.removeFromFavorites(taskId, session);
         return ResponseEntity.noContent().build();
     }

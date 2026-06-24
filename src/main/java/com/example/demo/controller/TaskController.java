@@ -63,7 +63,7 @@ public class TaskController {
             @ApiResponse(responseCode = "404", description = "Task not found", content = @Content(schema = @Schema(implementation = com.example.demo.dto.ErrorResponse.class)))
     })
     @GetMapping("/{id}")
-    public ResponseEntity<TaskResponseDto> getTask(@PathVariable int id) {
+    public ResponseEntity<TaskResponseDto> getTask(@PathVariable Long id) {
         return ResponseEntity.ok(taskMapper.toResponseDto(taskService.getTask(id)));
     }
 
@@ -89,7 +89,7 @@ public class TaskController {
     @PutMapping("/{id}")
     @DueDateNotBeforeCreation
     public ResponseEntity<TaskResponseDto> updateTask(
-            @PathVariable int id,
+            @PathVariable Long id,
             @RequestBody @Validated(OnUpdate.class) TaskUpdateDto taskUpdateDto) {
         Task task = taskService.getTask(id);
         Task updatedTask = taskMapper.updateEntity(taskUpdateDto, task);
@@ -103,7 +103,7 @@ public class TaskController {
             @ApiResponse(responseCode = "404", description = "Task not found", content = @Content(schema = @Schema(implementation = com.example.demo.dto.ErrorResponse.class)))
     })
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteTask(@PathVariable int id) {
+    public ResponseEntity<Void> deleteTask(@PathVariable Long id) {
         taskService.deleteTask(id);
         return ResponseEntity.noContent().build();
     }
