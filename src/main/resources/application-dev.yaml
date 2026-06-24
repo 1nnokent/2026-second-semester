@@ -4,6 +4,23 @@ server:
 app:
   name: To-Do List API [DEV]
   version: 2.0.0
+  upload:
+    dir: uploads/dev
+
+spring:
+  datasource:
+    url: ${DEV_DATASOURCE_URL:jdbc:postgresql://localhost:5433/todo_db}
+    username: ${DEV_DATASOURCE_USERNAME:${POSTGRES_USER:postgres}}
+    password: ${DEV_DATASOURCE_PASSWORD:${POSTGRES_PASSWORD:change_me_local_password}}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+  flyway:
+    enabled: true
 
 logging:
   level:
