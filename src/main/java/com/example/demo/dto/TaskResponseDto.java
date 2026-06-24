@@ -9,7 +9,7 @@ import java.util.Set;
 @Schema(description = "Task representation returned to API clients")
 public record TaskResponseDto(
         @Schema(description = "Task identifier", example = "1")
-        int id,
+        Long id,
 
         @Schema(description = "Short task title", example = "Prepare seminar slides")
         String title,
