@@ -1,57 +1,30 @@
 package com.example.demo.repository;
 
+import com.example.demo.model.Priority;
 import com.example.demo.model.Task;
+import java.time.LocalDate;
 import java.util.List;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
-/**
- * Интерфейс репозитория для управления задачами. Определяет контракт для выполнения CRUD операций
- * над объектами Task. Различные реализации этого интерфейса могут использовать разные способы
- * хранения данных (в памяти, база данных, файловая система и т.д.).
- */
-public interface TaskRepository {
+public interface TaskRepository extends JpaRepository<Task, Long> {
 
-    /**
-     * Добавляет новую задачу в репозиторий.
-     *
-     * @param task задача для добавления
-     */
-    void add(Task task);
+    List<Task> findByCompletedAndPriority(boolean completed, Priority priority);
 
-    /**
-     * Удаляет задачу по идентификатору.
-     *
-     * @param taskId идентификатор задачи для удаления
-     */
-    void delete(int taskId);
+    @Query("""
+            select t
+            from Task t
+            where t.dueDate between :startDate and :endDate
+            order by t.dueDate asc
+            """)
+    List<Task> findTasksDueWithinNext7Days(@Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate);
 
-    /**
-     * Получает задачу по идентификатору.
-     *
-     * @param taskId идентификатор задачи
-     * @return задача с указанным идентификатором или null, если не найдена
-     */
-    Task get(int taskId);
-
-    /**
-     * Получает список всех задач из репозитория.
-     *
-     * @return список всех задач
-     */
-    List<Task> getAll();
-
-    /**
-     * Обновляет существующую задачу.
-     *
-     * @param taskId идентификатор задачи для обновления
-     * @param task   новый объект задачи с обновленными данными
-     */
-    void update(int taskId, Task task);
-
-    /**
-     * Находит индекс задачи в репозитории.
-     *
-     * @param task задача для поиска
-     * @return индекс задачи или -1, если задача не найдена
-     */
-    int find(Task task);
+    @Query("""
+            select distinct t
+            from Task t
+            left join fetch t.attachments
+            """)
+    List<Task> findAllWithAttachments();
 }
