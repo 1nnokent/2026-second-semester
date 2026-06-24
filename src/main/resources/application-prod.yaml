@@ -1,0 +1,25 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+app:
+  name: To-Do List API [PROD]
+  version: 2.0.0
+  upload:
+    dir: ${APP_UPLOAD_DIR:uploads/prod}
+
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+
+logging:
+  level:
+    root: WARN
+    com.example.demo: INFO
