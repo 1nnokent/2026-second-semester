@@ -85,6 +85,16 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request, Map.of());
     }
 
+    @ExceptionHandler(ExternalApiException.class)
+    public org.springframework.http.ResponseEntity<ErrorResponse> handleExternalApi(
+            ExternalApiException exception, HttpServletRequest request) {
+        HttpStatus status = exception.getExternalStatus() == HttpStatus.TOO_MANY_REQUESTS.value()
+                ? HttpStatus.TOO_MANY_REQUESTS
+                : HttpStatus.BAD_GATEWAY;
+        return buildResponse(status, exception.getMessage(), request,
+                Map.of("externalStatus", exception.getExternalStatus()));
+    }
+
     @ExceptionHandler(AttachmentNotFoundException.class)
     public org.springframework.http.ResponseEntity<ErrorResponse> handleAttachmentNotFound(
             AttachmentNotFoundException exception, HttpServletRequest request) {
