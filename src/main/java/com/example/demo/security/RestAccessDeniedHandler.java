@@ -6,7 +6,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
@@ -25,13 +27,19 @@ public class RestAccessDeniedHandler implements AccessDeniedHandler {
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response,
             AccessDeniedException accessDeniedException) throws IOException {
+        Map<String, Object> details = new LinkedHashMap<>();
+        String traceId = MDC.get("traceId");
+        if (traceId != null) {
+            details.put("traceId", traceId);
+        }
+
         ErrorResponse body = new ErrorResponse(
                 Instant.now(),
                 HttpStatus.FORBIDDEN.value(),
                 HttpStatus.FORBIDDEN.getReasonPhrase(),
                 accessDeniedException.getMessage(),
                 request.getRequestURI(),
-                Map.of()
+                details
         );
 
         response.setStatus(body.status());

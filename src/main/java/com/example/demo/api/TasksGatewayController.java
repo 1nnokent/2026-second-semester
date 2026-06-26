@@ -33,6 +33,10 @@ public class TasksGatewayController {
     public ResponseEntity<GatewayTaskResponse> createTask(
             @Valid @RequestBody ExternalTaskRequest request) {
         CreatedGatewayTask createdTask = tasksGatewayService.createTask(request);
+        if (createdTask.task().degraded() || createdTask.task().id() == null) {
+            return ResponseEntity.ok(createdTask.task());
+        }
+
         URI internalLocation = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
                 .buildAndExpand(createdTask.task().id())
@@ -57,9 +61,17 @@ public class TasksGatewayController {
         return tasksGatewayService.getTasks(completed, limit);
     }
 
+    @GetMapping("/unstable")
+    public GatewayOperationResponse unstable(@RequestParam String mode) {
+        return tasksGatewayService.callUnstable(mode);
+    }
+
     @DeleteMapping("/{id}")
-    public ResponseEntity<GatewayOperationResponse> deleteTask(@PathVariable Long id) {
-        tasksGatewayService.deleteTask(id);
+    public ResponseEntity<?> deleteTask(@PathVariable Long id) {
+        GatewayOperationResponse response = tasksGatewayService.deleteTask(id);
+        if (response.degraded()) {
+            return ResponseEntity.ok(response);
+        }
         return ResponseEntity.noContent().build();
     }
 }

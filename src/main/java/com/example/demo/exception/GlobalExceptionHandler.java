@@ -7,8 +7,10 @@ import jakarta.validation.ConstraintViolationException;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.servlet.NoHandlerFoundException;
+import io.github.resilience4j.ratelimiter.RequestNotPermitted;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -113,6 +116,19 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.UNAUTHORIZED, exception.getMessage(), request, Map.of());
     }
 
+    @ExceptionHandler(AccessDeniedException.class)
+    public org.springframework.http.ResponseEntity<ErrorResponse> handleAccessDenied(
+            AccessDeniedException exception, HttpServletRequest request) {
+        return buildResponse(HttpStatus.FORBIDDEN, exception.getMessage(), request, Map.of());
+    }
+
+    @ExceptionHandler(RequestNotPermitted.class)
+    public org.springframework.http.ResponseEntity<ErrorResponse> handleRequestNotPermitted(
+            RequestNotPermitted exception, HttpServletRequest request) {
+        return buildResponse(HttpStatus.TOO_MANY_REQUESTS,
+                "Rate limit for external API has been exceeded", request, Map.of());
+    }
+
     @ExceptionHandler(Exception.class)
     public org.springframework.http.ResponseEntity<ErrorResponse> handleException(
             Exception exception, HttpServletRequest request) {
@@ -122,13 +138,19 @@ public class GlobalExceptionHandler {
 
     private org.springframework.http.ResponseEntity<ErrorResponse> buildResponse(HttpStatus status,
             String message, HttpServletRequest request, Map<String, Object> details) {
+        Map<String, Object> responseDetails = new LinkedHashMap<>(details);
+        String traceId = MDC.get("traceId");
+        if (traceId != null) {
+            responseDetails.put("traceId", traceId);
+        }
+
         ErrorResponse errorResponse = new ErrorResponse(
                 Instant.now(),
                 status.value(),
                 status.getReasonPhrase(),
                 message,
                 request.getRequestURI(),
-                details
+                responseDetails
         );
         return org.springframework.http.ResponseEntity.status(status).body(errorResponse);
     }

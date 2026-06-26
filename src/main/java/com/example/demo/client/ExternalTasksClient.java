@@ -12,11 +12,12 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
@@ -25,10 +26,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.util.StreamUtils;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.context.WebApplicationContext;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import org.springframework.web.util.UriComponentsBuilder;
-import org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext;
 
 @Component
 public class ExternalTasksClient {
@@ -95,6 +93,15 @@ public class ExternalTasksClient {
                         .uri(taskUri(id))
                         .accept(MediaType.APPLICATION_JSON),
                 "delete task " + id)
+                .toBodilessEntity();
+    }
+
+    public void callUnstable(String mode) {
+        applyErrorHandling(
+                restClient.get()
+                        .uri(unstableUri(mode))
+                        .accept(MediaType.ALL),
+                "probe unstable mode " + mode)
                 .toBodilessEntity();
     }
 
@@ -195,8 +202,16 @@ public class ExternalTasksClient {
     private URI tasksUri(Boolean completed, Integer limit) {
         return UriComponentsBuilder.fromUriString(resolveBaseUrl())
                 .path("/tasks")
-                .queryParamIfPresent("completed", java.util.Optional.ofNullable(completed))
-                .queryParamIfPresent("limit", java.util.Optional.ofNullable(limit))
+                .queryParamIfPresent("completed", Optional.ofNullable(completed))
+                .queryParamIfPresent("limit", Optional.ofNullable(limit))
+                .build(true)
+                .toUri();
+    }
+
+    private URI unstableUri(String mode) {
+        return UriComponentsBuilder.fromUriString(resolveBaseUrl())
+                .path("/unstable")
+                .queryParam("mode", mode)
                 .build(true)
                 .toUri();
     }
