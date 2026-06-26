@@ -6,6 +6,24 @@ app:
   version: 2.0.0
   upload:
     dir: uploads
+  security:
+    password-pepper: gateway-pepper-2026
+    jwt:
+      secret: aMw/RhN48pj3PO6xHohn9Lb4DM17YbfVfTLfts20Aa3OedChLpTGFol3DddMwX9ItK0NE1VZhg9T6St1hoa7Lw==
+      access-token-ttl: 30m
+    users:
+      user:
+        username: user
+        password-hash: $2b$12$4qo5UAeCsTpzAqsgtZ72P.aNuaCqSRYaxJahq.AFR0MAinnddppqG
+        roles:
+          - USER
+      reader:
+        username: reader
+        password-hash: $2b$12$cIcpXYKd8PwWWxQi8BfLiOFSz7D6VFWnhrQL4eYG3PVBnwiXo4Shm
+        roles:
+          - USER
+        authorities:
+          - READ_PRIVILEGE
 
 spring:
   profiles:
