@@ -1,0 +1,82 @@
+server:
+  port: 8080
+
+app:
+  name: To-Do List API
+  version: 2.0.0
+  upload:
+    dir: uploads
+  security:
+    password-pepper: gateway-pepper-2026
+    jwt:
+      secret: aMw/RhN48pj3PO6xHohn9Lb4DM17YbfVfTLfts20Aa3OedChLpTGFol3DddMwX9ItK0NE1VZhg9T6St1hoa7Lw==
+      access-token-ttl: 30m
+    users:
+      user:
+        username: user
+        password-hash: $2b$12$4qo5UAeCsTpzAqsgtZ72P.aNuaCqSRYaxJahq.AFR0MAinnddppqG
+        roles:
+          - USER
+      reader:
+        username: reader
+        password-hash: $2b$12$cIcpXYKd8PwWWxQi8BfLiOFSz7D6VFWnhrQL4eYG3PVBnwiXo4Shm
+        roles:
+          - USER
+        authorities:
+          - READ_PRIVILEGE
+
+spring:
+  profiles:
+    default: local
+  config:
+    import: optional:file:.env[.properties]
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+  mvc:
+    throw-exception-if-no-handler-found: true
+  jpa:
+    open-in-view: false
+  flyway:
+    enabled: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+external:
+  api:
+    base-url:
+    user-agent: resilient-secure-http-gateway/1.0
+    connect-timeout: 2s
+    read-timeout: 2s
+
+management:
+  endpoint:
+    health:
+      show-details: always
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,circuitbreakers,circuitbreakerevents,ratelimiters
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      externalApi:
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 4
+        minimumNumberOfCalls: 4
+        failureRateThreshold: 50
+        permittedNumberOfCallsInHalfOpenState: 2
+        waitDurationInOpenState: 10s
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        ignoreExceptions:
+          - com.example.demo.exception.TaskNotFoundException
+  ratelimiter:
+    instances:
+      externalApi:
+        limitForPeriod: 3
+        limitRefreshPeriod: 10s
+        timeoutDuration: 0
